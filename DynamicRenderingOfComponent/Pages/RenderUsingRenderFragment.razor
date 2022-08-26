@@ -1,0 +1,129 @@
+﻿@page "/renderUsingRenderFragment"
+@inject NavigationManager navigationManager
+
+@using System.Reflection
+
+<h1>Hello, world!</h1>
+
+Welcome to your new app.
+
+<SurveyPrompt Title="How is Blazor working for you?" />
+
+<select id="components" name="components" @bind = "selectedType" >
+    @foreach(var type in types)
+            {
+                <option value = "@type.Name"> @type.Name </option> 
+            }
+</select>
+
+<select id="components" name="zones" @bind = "selectedZone">
+    @foreach (var zone in zones)
+    {
+        <option value="@zone"> @zone </option>
+    }
+</select>
+
+<button @onclick="RenderComponent">ADD</button>
+
+
+<div>
+    <h2>DIV 1</h2>
+    @foreach(var render in Zones.Where(x=>x.Zone =="1")){
+        RenderZones(render.ComponentName);
+        <div>@renderZoneFragments</div>
+    }
+    @if (type != null && zone == "1")
+    {
+        Zones.Add(new ZoneModel() { ComponentName = select, CreatedOn =DateTime.Now, Zone = "1"});
+        <div>@renderFragment</div>
+    }
+    <hr />
+</div>
+<div>
+    <h2>DIV 2</h2>
+    @foreach (var render in Zones.Where(x => x.Zone == "2"))
+    {
+        RenderZones(render.ComponentName);
+        @renderZoneFragments;
+    }
+    @if (type != null && zone == "2")
+    {
+        Zones.Add(new ZoneModel() { ComponentName = select, CreatedOn = DateTime.Now, Zone = "2" });
+        @renderFragment
+    }
+    <hr />
+</div>
+
+<div>
+    <h2>DIV 3</h2>
+    @foreach (var render in Zones.Where(x => x.Zone == "3"))
+    {
+        RenderZones(render.ComponentName);
+        @renderZoneFragments
+        ;
+    }
+    @if (type != null && zone == "3")
+    {
+        Zones.Add(new ZoneModel() { ComponentName = select, CreatedOn = DateTime.Now, Zone = "3" });
+        @renderFragment
+    }
+    <hr />
+</div>
+
+
+@code {
+    //List<string> types = new List<string> { "CheckboxComponent", "TextboxComponent" };
+    List<Type> types = Assembly.GetExecutingAssembly().GetTypes().Where(type => type.GetInterfaces().Contains(typeof(IWebComponents))).ToList();
+    List<string> zones = new List<string> { "1", "2", "3" };
+    List<ZoneModel> Zones = new List<ZoneModel>();
+
+    string ComponentNamespace = "DynamicRenderingOfComponent.Components.";
+
+    public Type? type;
+    private string selectedType = String.Empty;
+    private string select = String.Empty;
+    private string selectedZone = String.Empty;
+    private string zone = String.Empty;
+    private bool shouldRender = true;
+
+    RenderFragment? renderFragment;
+    RenderFragment? renderZoneFragments;
+
+    private RenderFragment CreateFragment(Type type) => builder =>
+    {
+
+        if(type != null){
+            builder.OpenComponent(0, type);
+            builder.CloseComponent();
+        }
+    };
+
+    public void RenderComponent(){
+        shouldRender = true;
+        zone = selectedZone;
+        select = selectedType;
+        type = Type.GetType($"{ComponentNamespace}{selectedType}");
+        renderFragment = CreateFragment(type);
+        string url = navigationManager.Uri;
+
+        //StateHasChanged();
+    }
+
+    public void RenderZones(string select){
+        type = Type.GetType($"{ComponentNamespace}{select}");
+        renderZoneFragments = CreateFragment(type);
+    }
+
+    protected override bool ShouldRender()
+     {
+        return shouldRender;
+    }
+
+    protected override Task OnAfterRenderAsync(bool firstRender)
+    {
+        shouldRender = false;
+        firstRender = shouldRender;
+
+        return base.OnAfterRenderAsync(firstRender);
+    }
+}
